@@ -5,7 +5,7 @@ pub type Constant = NotNan<f64>;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
-use std::error::Error;
+pub type Rewrite = egg::Rewrite<Prospero, ()>;
 
 
 define_language! {
@@ -25,9 +25,15 @@ define_language! {
     }
 }
 
+/*
+#[rustfmt::skip]
+pub fn rules() -> Vec<Rewrite> { vec![
+    rw!("comm-add";  "(+ ?a ?b)"  => "(+ ?b ?a)"),
+]}
+*/
 
 pub fn parse_lang_expr(input: &str) -> io::Result<RecExpr<Prospero>> {
-    let mut Ids: HashMap<String, Id> = HashMap::new();
+    let mut ids: HashMap<String, Id> = HashMap::new();
     let mut list = Vec::new();
     println!("{}", input);
     let file = File::open(input)?;
@@ -43,25 +49,22 @@ pub fn parse_lang_expr(input: &str) -> io::Result<RecExpr<Prospero>> {
             "const" => Prospero::Constant(tokens[2].parse().unwrap()),
             "var-x" => Prospero::VarX,
             "var-y" => Prospero::VarY,
-            "neg"   => Prospero::Neg(Ids[tokens[2]]),
-            "square" => Prospero::Square(Ids[tokens[2]]), 
-            "sqrt" => Prospero::Sqrt(Ids[tokens[2]]),
-            "add" => Prospero::Add([Ids[tokens[2]], Ids[tokens[3]]]),
-            "sub" => Prospero::Sub([Ids[tokens[2]], Ids[tokens[3]]]),
-            "mul" => Prospero::Mul([Ids[tokens[2]], Ids[tokens[3]]]),
-            "max" => Prospero::Max([Ids[tokens[2]], Ids[tokens[3]]]),
-            "min" => Prospero::Min([Ids[tokens[2]], Ids[tokens[3]]]),
+            "neg"   => Prospero::Neg(ids[tokens[2]]),
+            "square" => Prospero::Square(ids[tokens[2]]), 
+            "sqrt" => Prospero::Sqrt(ids[tokens[2]]),
+            "add" => Prospero::Add([ids[tokens[2]], ids[tokens[3]]]),
+            "sub" => Prospero::Sub([ids[tokens[2]], ids[tokens[3]]]),
+            "mul" => Prospero::Mul([ids[tokens[2]], ids[tokens[3]]]),
+            "max" => Prospero::Max([ids[tokens[2]], ids[tokens[3]]]),
+            "min" => Prospero::Min([ids[tokens[2]], ids[tokens[3]]]),
             _ => panic!("Unknown operation: {}", tokens[1]),
         };
 
         let index = list.len();
         list.push(node);
-        Ids.insert(id.to_string(), index.into());
+        ids.insert(id.to_string(), index.into());
     }
     println!("{:?}", list);
     return Ok(egg::RecExpr::<Prospero>::from(list));
 }
 
-pub fn test() {
-    println!("Hello, world!");
-}

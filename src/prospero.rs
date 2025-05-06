@@ -22,8 +22,8 @@ define_language! {
         "neg" = Neg(Id),
         "square" = Square(Id),
         "sqrt" = Sqrt(Id),
-        "intv" = Interval([Id; 2]),
         Constant(Constant),
+        "intv" = Interval([Id; 2]),
     }
 }
 #[derive(Default)]
@@ -43,8 +43,13 @@ impl Analysis<Prospero> for IntervalArithmetic {
                 Interval::constant(**c),
                 format!("{}", c).parse().unwrap(),
             ),
+            
+            Prospero::Interval([a, b]) => (
+                Interval {lo: x(a)?.lo, hi: x(b)?.hi},
+                format!("(intv {} {})", x(a)?, x(b)?).parse().unwrap(), 
+            ),
             Prospero::Add([a, b]) => (
-                Interval::add(x(a)?, x(b)?),
+                Interval::add(x(a)?, x(b)?), 
                 format!("(+ {} {})", x(a)?, x(b)?).parse().unwrap(),
             ),
             Prospero::Sub([a, b]) => (
@@ -101,14 +106,20 @@ impl Analysis<Prospero> for IntervalArithmetic {
         let data = egraph[id].data.clone();
         if let Some((interval, pat)) = data {
             if egraph.are_explanations_enabled() {
-                let pattern_str = pat.to_string();
                 let interval_str = interval.to_string();
+                dbg!(&interval_str);
                 egraph.union_instantiations(
                     &pat,
                     &interval_str.parse().unwrap(),
                     &Default::default(),
                     "interval_analysis".to_string(),
                 );
+            } else {
+                let id_lo = egraph.add(Prospero::Constant(NotNan::new(interval.lo).unwrap()));
+                let id_hi = egraph.add(Prospero::Constant(NotNan::new(interval.hi).unwrap()));
+
+                let added = egraph.add(Prospero::Interval([id_lo, id_hi]));
+                egraph.union(id, added);
             }
 
             #[cfg(debug_assertions)]

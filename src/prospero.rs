@@ -5,7 +5,8 @@ pub type Constant = NotNan<f64>;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
-pub type EGraph = egg::EGraph<Prospero, ConstantFold>;
+use crate::interval::Interval;
+pub type EGraph = egg::EGraph<Prospero, IntervalArithmetic>;
 pub type Rewrite = egg::Rewrite<Prospero, ()>;
 
 
@@ -21,11 +22,102 @@ define_language! {
         "neg" = Neg(Id),
         "square" = Square(Id),
         "sqrt" = Sqrt(Id),
+        "intv" = Interval([Id; 2]),
         Constant(Constant),
     }
 }
+#[derive(Default)]
+pub struct IntervalArithmetic;
+impl Analysis<Prospero> for IntervalArithmetic {
+    type Data = Option<(Interval, PatternAst<Prospero>)>;
 
+    fn make(egraph: &mut EGraph, enode: &Prospero) -> Self::Data {
+        let x = |i: &Id| egraph[*i].data.as_ref().map(|d| &d.0);
 
+        Some(match enode {
+            Prospero::VarX | Prospero::VarY => (
+                Interval { lo: -1.0, hi: 1.0 },
+                format!("{}", enode).parse().unwrap(),
+            ),    
+            Prospero::Constant(c) => (
+                Interval::constant(**c),
+                format!("{}", c).parse().unwrap(),
+            ),
+            Prospero::Add([a, b]) => (
+                Interval::add(x(a)?, x(b)?),
+                format!("(+ {} {})", x(a)?, x(b)?).parse().unwrap(),
+            ),
+            Prospero::Sub([a, b]) => (
+                Interval::sub(x(a)?, x(b)?),
+                format!("(- {} {})", x(a)?, x(b)?).parse().unwrap(),
+            ),
+            Prospero::Mul([a, b]) => (
+                Interval::mul(x(a)?, x(b)?),
+                format!("(* {} {})", x(a)?, x(b)?).parse().unwrap(),
+            ),
+            Prospero::Neg(a) => (
+                Interval::neg(x(a)?),
+                format!("(neg {})", x(a)?).parse().unwrap(),
+            ),
+            Prospero::Square(a) => (
+                Interval::square(x(a)?),
+                format!("(square {})", x(a)?).parse().unwrap(),
+            ),
+            Prospero::Sqrt(a) => (
+                Interval::sqrt(x(a)?),
+                format!("(sqrt {})", x(a)?).parse().unwrap(),
+            ),
+            Prospero::Min([a, b]) => (
+                Interval::min(x(a)?, x(b)?),
+                format!("(min {} {})", x(a)?, x(b)?).parse().unwrap(),
+            ),
+            Prospero::Max([a, b]) => (
+                Interval::max(x(a)?, x(b)?),
+                format!("(max {} {})", x(a)?, x(b)?).parse().unwrap(),
+            ),
+            _ => return None,
+        })
+    }
+
+    fn merge(&mut self, to: &mut Self::Data, from: Self::Data) -> DidMerge {
+        merge_option(to, from, |a, b| {
+            let Interval { lo: lo1, hi: hi1 } = a.0;
+            let Interval { lo: lo2, hi: hi2 } = b.0;
+            let merged = Interval {
+                lo: lo1.min(lo2),
+                hi: hi1.max(hi2),
+            };
+            if merged != a.0 {
+                a.0 = merged;
+                a.1 = format!("{}", merged).parse().unwrap();
+                DidMerge(true, false)
+            } else {
+                DidMerge(false, false)
+            }
+        })
+    }
+
+    fn modify(egraph: &mut EGraph, id: Id) {
+        let data = egraph[id].data.clone();
+        if let Some((interval, pat)) = data {
+            if egraph.are_explanations_enabled() {
+                let pattern_str = pat.to_string();
+                let interval_str = interval.to_string();
+                egraph.union_instantiations(
+                    &pat,
+                    &interval_str.parse().unwrap(),
+                    &Default::default(),
+                    "interval_analysis".to_string(),
+                );
+            }
+
+            #[cfg(debug_assertions)]
+            egraph[id].assert_unique_leaves();
+        }
+    }
+}
+
+/*
 #[derive(Default)]
 pub struct ConstantFold;
 impl Analysis<Prospero> for ConstantFold {
@@ -101,7 +193,8 @@ impl Analysis<Prospero> for ConstantFold {
     }
 }
 
-/*
+
+
 #[rustfmt::skip]
 pub fn rules() -> Vec<Rewrite> { vec![
     rw!("comm-add";  "(+ ?a ?b)"  => "(+ ?b ?a)"),

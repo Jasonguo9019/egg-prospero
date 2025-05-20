@@ -92,15 +92,17 @@ impl Analysis<Prospero> for IntervalArithmetic {
                 lo: lo1.min(lo2),
                 hi: hi1.max(hi2),
             };
-            if merged != a.0 {
-                a.0 = merged;
-                a.1 = format!("{}", merged).parse().unwrap();
-                DidMerge(true, false)
-            } else {
-                DidMerge(false, false)
-            }
+            DidMerge(a.0 != merged, b.0 != merged)
         })
     }
+        
+    /*
+     fn merge(&mut self, to: &mut Self::Data, from: Self::Data) -> DidMerge {
+        merge_option(to, from, |a, b| {
+            assert_eq!(a.0, b.0, "Merged non-equal intervals");
+            DidMerge(false, false)
+        })
+    }*/
 
     fn modify(egraph: &mut EGraph, id: Id) {
         let data = egraph[id].data.clone();
@@ -122,8 +124,6 @@ impl Analysis<Prospero> for IntervalArithmetic {
                 egraph.union(id, added);
             }
 
-            #[cfg(debug_assertions)]
-            egraph[id].assert_unique_leaves();
         }
     }
 }

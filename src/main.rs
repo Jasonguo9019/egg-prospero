@@ -12,10 +12,10 @@ fn main() {
     
     let input = "/Users/jasonguo/egg-prospero/prospero.vm";
     //let start = prospero::parse_lang_expr(input).unwrap();
-    let start: RecExpr<prospero::Prospero> = "(+ var-x var-y)".parse().unwrap();
+    let start: RecExpr<prospero::Prospero> = "(* (+ (intv -1 1) var-x) 2)".parse().unwrap();
     //println!("Starting expression: {}", start);
     let rules: &[Rewrite<prospero::Prospero, prospero::IntervalArithmetic>] = &[
-        rw!("commute-add"; "(+ ?x ?y)" => "(+ ?y ?x)"),
+        //rw!("commute-add"; "(+ ?x ?y)" => "(+ ?y ?x)"),
         ];
     
     let mut runner = Runner::default().with_expr(&start);

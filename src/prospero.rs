@@ -35,10 +35,12 @@ impl Analysis<Prospero> for IntervalArithmetic {
         let x = |i: &Id| egraph[*i].data.as_ref().map(|d| &d.0);
 
         Some(match enode {
+            /*
             Prospero::VarX | Prospero::VarY => (
                 Interval { lo: -1.0, hi: 1.0 },
                 format!("{}", enode).parse().unwrap(),
             ),    
+            */
             Prospero::Constant(c) => (
                 Interval::constant(**c),
                 format!("{}", c).parse().unwrap(),
@@ -96,13 +98,6 @@ impl Analysis<Prospero> for IntervalArithmetic {
         })
     }
         
-    /*
-     fn merge(&mut self, to: &mut Self::Data, from: Self::Data) -> DidMerge {
-        merge_option(to, from, |a, b| {
-            assert_eq!(a.0, b.0, "Merged non-equal intervals");
-            DidMerge(false, false)
-        })
-    }*/
 
     fn modify(egraph: &mut EGraph, id: Id) {
         let data = egraph[id].data.clone();
@@ -204,12 +199,6 @@ impl Analysis<Prospero> for ConstantFold {
     }
 }
 
-
-
-#[rustfmt::skip]
-pub fn rules() -> Vec<Rewrite> { vec![
-    rw!("comm-add";  "(+ ?a ?b)"  => "(+ ?b ?a)"),
-]}
 */
 
 pub fn parse_lang_expr(input: &str) -> io::Result<RecExpr<Prospero>> {

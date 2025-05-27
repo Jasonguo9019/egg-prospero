@@ -9,25 +9,26 @@ pub type Constant = NotNan<f64>;
 
 
 fn main() {
-    
-    let input = "/Users/jasonguo/egg-prospero/prospero.vm";
-    //let start = prospero::parse_lang_expr(input).unwrap();
-    let start: RecExpr<prospero::Prospero> = "(* (+ (intv -1 1) var-x) 2)".parse().unwrap();
-    //println!("Starting expression: {}", start);
-    let rules: &[Rewrite<prospero::Prospero, prospero::IntervalArithmetic>] = &[
-        //rw!("commute-add"; "(+ ?x ?y)" => "(+ ?y ?x)"),
-        ];
-    
-    let mut runner = Runner::default().with_expr(&start);
-    let pre_extractor = Extractor::new(&runner.egraph, AstSize);
-    let (pre_cost, pre_expr) = pre_extractor.find_best(runner.roots[0]);
-    println!("before:  cost={}  expr={}", pre_cost, pre_expr);
 
-    runner = runner.run(rules);
+    let input  = "/Users/jasonguo/egg-prospero/prospero.vm";
+    let start  = prospero::parse_lang_expr(input).unwrap();
+    //let start: RecExpr<prospero::Prospero> = "(* (+ 2 5) var-x)".parse().unwrap();
+    
+    let mut runner_plain: Runner<prospero::Prospero, ()> = Runner::default()
+        .with_expr(&start);
+    let plain_ex = Extractor::new(&runner_plain.egraph, AstSize);
+    let (plain_cost, plain_expr) = plain_ex.find_best(runner_plain.roots[0]);
+    println!("Before: cost={} expr={}", plain_cost, plain_expr);
 
-    let post_extractor = Extractor::new(&runner.egraph, AstSize);
-    let (post_cost, post_expr) = post_extractor.find_best(runner.roots[0]);
-    println!("after:  cost={}  expr={}", post_cost, post_expr);
+    let mut runner_ia: Runner<prospero::Prospero, prospero::IntervalArithmetic> = Runner::default()
+        .with_expr(&start);
+    runner_ia = runner_ia.run(&[]);
+    let ia_ex = Extractor::new(&runner_ia.egraph, AstSize);
+    let (ia_cost, ia_expr) = ia_ex.find_best(runner_ia.roots[0]);
+    println!("After (with interval arithmetic):   cost={} expr={}", ia_cost, ia_expr);
 }
+
+
+    
 
 
